@@ -1,0 +1,5 @@
+{
+  "STAR2Pass.referenceGenome": "mm10",
+  "STAR2Pass.STARgenomeTAR": "s3://fh-ctr-public-reference-data/genome_data/Mus_musculus/UCSC/mm10/STAR2.7.1_mm10.tgz",
+  "STAR2Pass.RNASeQC_genesGtf": "s3://fh-ctr-public-reference-data/genome_data/Mus_musculus/UCSC/mm10/Annotation/Archives/archive-2015-07-17-14-33-26/Genes/genes.gtf"
+}

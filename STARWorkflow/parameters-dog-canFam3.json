@@ -1,0 +1,5 @@
+{
+  "STAR2Pass.referenceGenome": "canFam3",
+  "STAR2Pass.STARgenomeTAR": "s3://fh-ctr-public-reference-data/genome_data/Canis_familiaris/UCSC/canFam3/STAR2.7.1_canFam3.tgz",
+  "STAR2Pass.RNASeQC_genesGtf": "s3://fh-ctr-public-reference-data/genome_data/Canis_familiaris/UCSC/canFam3/Annotation/Archives/archive-2015-07-17-14-30-11/Genes/genes.gtf"
+}
