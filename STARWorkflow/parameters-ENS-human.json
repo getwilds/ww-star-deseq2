@@ -1,5 +1,0 @@
-{
-  "STAR2Pass.referenceGenome": "GRCh38.gencode.v31",
-  "STAR2Pass.STARgenomeTAR": "s3://fh-ctr-public-reference-data/genome_data/human/hg38/STAR2.7.1_genomeGRCh38.gencode.v31.tgz",
-  "STAR2Pass.RNASeQC_genesGtf": "s3://fh-ctr-public-reference-data/genome_data/human/hg38/gencode.v31.genes.gtf"
-}

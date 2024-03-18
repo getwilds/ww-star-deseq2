@@ -1,5 +1,0 @@
-{
-  "STAR2Pass.referenceGenome": "dm6",
-  "STAR2Pass.STARgenomeTAR": "s3://fh-ctr-public-reference-data/genome_data/Drosophila_melanogaster/UCSC/dm6/STAR2.7.1_dm6.tgz",
-  "STAR2Pass.RNASeQC_genesGtf": "s3://fh-ctr-public-reference-data/genome_data/Drosophila_melanogaster/UCSC/dm6/Annotation/Genes/genes.gtf"
-}
