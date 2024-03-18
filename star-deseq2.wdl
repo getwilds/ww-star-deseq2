@@ -56,12 +56,12 @@ workflow STAR2Pass {
   # Outputs that will be retained when execution is complete
   output {
     Array[File] output_bam = STARalignTwoPass.bam
-		Array[File] output_bai = STARalignTwoPass.bai
-		Array[File] output_geneCounts = STARalignTwoPass.geneCounts
-		Array[File] output_log_final = STARalignTwoPass.log_final
+    Array[File] output_bai = STARalignTwoPass.bai
+    Array[File] output_geneCounts = STARalignTwoPass.geneCounts
+    Array[File] output_log_final = STARalignTwoPass.log_final
     Array[File] output_log_progress = STARalignTwoPass.log_progress
     Array[File] output_log = STARalignTwoPass.log
-		Array[File] output_SJ = STARalignTwoPass.SJout
+    Array[File] output_SJ = STARalignTwoPass.SJout
     ##Array[File] output_rnaseqc = RNASeQC.rnaseqc_metrics
   }
 } # End Workflow
@@ -132,10 +132,10 @@ task STARalignTwoPass {
     String referenceGenome
   }
 
-	command <<<
-	  set -eo pipefail
+  command <<<
+    set -eo pipefail
     mkdir genomeDir
-	  tar -xzf ${star_genome_refs_zipped} -C genomeDir
+    tar -xzf ${star_genome_refs_zipped} -C genomeDir
     STAR \
       --genomeDir genomeDir \
       --readFilesIn ${r1fastq} ${r2fastq} \
@@ -150,23 +150,23 @@ task STARalignTwoPass {
     mv ReadsPerGene.out.tab ${base_file_name}.${referenceGenome}.ReadsPerGene.out.tab
     mv Log.final.out ${base_file_name}.${referenceGenome}.Log.final.out
     samtools index ${base_file_name}.${referenceGenome}.Aligned.sortedByCoord.out.bam
-	>>>
+  >>>
 
-	output {
-		File bam = "${base_file_name}.${referenceGenome}.Aligned.sortedByCoord.out.bam"
+  output {
+    File bam = "${base_file_name}.${referenceGenome}.Aligned.sortedByCoord.out.bam"
     File bai = "${base_file_name}.${referenceGenome}.Aligned.sortedByCoord.out.bam.bai"
     File geneCounts = "${base_file_name}.${referenceGenome}.ReadsPerGene.out.tab"
-		File log_final = "${base_file_name}.${referenceGenome}.Log.final.out"
+    File log_final = "${base_file_name}.${referenceGenome}.Log.final.out"
     File log_progress = "Log.progress.out"
-		File log = "Log.out"
+    File log = "Log.out"
     File SJout = "SJ.out.tab"
-	}
+  }
 
-	runtime {
-		docker: "fredhutch/star:2.7.1a"
-		memory: "62 GB"
-		cpu: "8"
-	}
+  runtime {
+    docker: "fredhutch/star:2.7.1a"
+    memory: "62 GB"
+    cpu: "8"
+  }
 }
 ### r5.2xlarge = 8 cpu, 64GiB memory
 
