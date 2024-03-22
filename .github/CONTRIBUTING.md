@@ -1,6 +1,6 @@
 # Contributing
 
-This outlines how to propose a change to the tg-star-deseq2-wdl workflow repository. 
+This outlines how to propose a change to the ww-star-deseq2 workflow repository. 
 For more detailed info about contributing to this, and other WILDS projects, please see the
 [**WILDS Contributing Guide**](https://getwilds.org/guide/). 
 
