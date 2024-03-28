@@ -43,13 +43,13 @@ workflow STAR2Pass {
         referenceGenome=referenceGenome
     }
 
-    # call RNASeQC {
-    #   input:
-    #     base_file_name=base_file_name,
-    #     bam_file=STARalignTwoPass.bam,
-    #     bam_index=STARalignTwoPass.bai,
-    #     refGtf=RNASeQC_genesGtf
-    # }
+    call RNASeQC {
+      input:
+        base_file_name=base_file_name,
+        bam_file=STARalignTwoPass.bam,
+        bam_index=STARalignTwoPass.bai,
+        refGtf=RNASeQC_genesGtf
+    }
 
   } # End scatter 
 
@@ -62,7 +62,7 @@ workflow STAR2Pass {
     Array[File] output_log_progress = STARalignTwoPass.log_progress
     Array[File] output_log = STARalignTwoPass.log
     Array[File] output_SJ = STARalignTwoPass.SJout
-    ##Array[File] output_rnaseqc = RNASeQC.rnaseqc_metrics
+    Array[File] output_rnaseqc = RNASeQC.rnaseqc_metrics
   }
 } # End Workflow
 
@@ -163,7 +163,7 @@ task STARalignTwoPass {
   }
 
   runtime {
-    docker: "fredhutch/star:2.7.1a"
+    docker: "ghcr.io/getwilds/star:2.7.6a"
     memory: "62 GB"
     cpu: "8"
   }
@@ -191,7 +191,7 @@ task RNASeQC {
   }
 
   runtime {
-    docker: "broadinstitute/gtex_rnaseq"
+    docker: "ghcr.io/getwilds/rnaseqc:1.1.9"
     memory: "4 GB"
     cpu: "2"
   }
