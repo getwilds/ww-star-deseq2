@@ -1,5 +1,5 @@
 {
-  "STAR2Pass.batchFile": "path_to_inputs/input_manifest.tsv",
+  "STAR2Pass.batchFile": "input_manifest.tsv",
   "STAR2Pass.referenceGenome": "GRCh38.gencode.v31",
   "STAR2Pass.STARgenomeTAR": "path_to_reference_tarfile/STAR2.7.1_genomeGRCh38.gencode.v31.tgz",
   "STAR2Pass.RNASeQC_genesGtf": "path_to_ref_gtf/gencode.v31.genes.gtf"
