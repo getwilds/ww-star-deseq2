@@ -129,12 +129,13 @@ task STARalignTwoPass {
     String referenceGenome
   }
 
+  String star_db_dir = basename(star_genome_refs_zipped, ".tar.gz")
+
   command <<<
     set -eo pipefail
-    mkdir genomeDir
-    tar -xzf "~{star_genome_refs_zipped}" -C genomeDir
+    tar -xzf "~{star_genome_refs_zipped}"
     STAR \
-      --genomeDir genomeDir \
+      --genomeDir "~{star_db_dir}" \
       --readFilesIn "~{r1fastq}" "~{r2fastq}" \
       --runThreadN 6 \
       --readFilesCommand zcat \
