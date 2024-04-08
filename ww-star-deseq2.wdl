@@ -177,10 +177,8 @@ task RNASeQC {
   }
 
   command <<<
-    java -Xmx4g -jar /usr/rnaseqc/RNA-SeQC.jar -n 1000 \
-      "~{refGtf}" "~{bam_file}" OUTPUT \
-      --sample="~{base_file_name}" \
-      --coverage 
+    rnaseqc.v2.4.2.linux "~{refGtf}" "~{bam_file}" OUTPUT \
+      --sample="~{base_file_name}" --coverage 
     tar -cvzf "~{base_file_name}.QC.tar.gz" OUTPUT/*
   >>>
 
