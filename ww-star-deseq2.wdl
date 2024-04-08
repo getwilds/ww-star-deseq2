@@ -177,7 +177,7 @@ task RNASeQC {
   }
 
   command <<<
-    rnaseqc.v2.4.2.linux "~{refGtf}" "~{bam_file}" OUTPUT \
+    rnaseqc "~{refGtf}" "~{bam_file}" OUTPUT \
       --sample="~{base_file_name}" --coverage 
     tar -cvzf "~{base_file_name}.QC.tar.gz" OUTPUT/*
   >>>
@@ -187,7 +187,7 @@ task RNASeQC {
   }
 
   runtime {
-    docker: "ghcr.io/getwilds/rnaseqc:1.1.9"
+    docker: "ghcr.io/tefirman/rnaseqc:1.1.9"
     memory: "4 GB"
     cpu: "2"
   }
