@@ -166,8 +166,9 @@ task STARalignTwoPass {
     cpu: "8"
   }
 }
-### r5.2xlarge = 8 cpu, 64GiB memory
 
+# Make sure to collapse your exon-based gtf into a gene-based gtf via the script below:
+# https://github.com/broadinstitute/gtex-pipeline/blob/master/gene_model/collapse_annotation.py
 task RNASeQC {
   input {
     File bam_file
@@ -187,7 +188,7 @@ task RNASeQC {
   }
 
   runtime {
-    docker: "ghcr.io/tefirman/rnaseqc:1.1.9"
+    docker: "ghcr.io/getwilds/rnaseqc:2.4.2"
     memory: "4 GB"
     cpu: "2"
   }
