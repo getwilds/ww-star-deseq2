@@ -63,10 +63,27 @@ workflow STAR2Pass {
     Array[File] output_SJ = STARalignTwoPass.SJout
     Array[File] output_rnaseqc = RNASeQC.rnaseqc_metrics
   }
+
+  parameter_meta {
+    batchFile: "input tsv describing the samples to be analyzed and the locations of their fastq files"
+    STARgenomeTAR: "reference genome files necessary for STAR analysis in tar file format"
+    referenceGenome: "name of the reference genome"
+    RNASeQC_genesGtf: "gene-based gtf annotation file providing the genomic location of each gene"
+
+    output_bam: "array of aligned bam files for each sample"
+    output_bai: "array of corresponding index files for each aligned bam file"
+    output_gene_counts: "array of text files containing the number of reads in each gene for each sample"
+    output_log_final: "array of text files containing an overarching summary of the analysis performed for each sample"
+    output_log_progress: "array of text files containing a detailed progress report for each sample"
+    output_log: "array of text files containing STAR's raw command line output for each sample"
+    output_SJ: "array of text files containing splice junction details for each sample being analyzed"
+    output_rnaseqc: "array of tar files containing RNA QC data for each sample being analyzed"
+  }
 } # End Workflow
 
 #### TASK DEFINITIONS
 
+# Locates the specified fastq files
 task FindFastqs {
   input {
     String fastqR1String
@@ -94,8 +111,17 @@ task FindFastqs {
     memory: "2 GB"
     cpu: "2"
   }
+
+  parameter_meta {
+    fastqR1String: "comma-separated string of R1 fastq locations for the sample in question"
+    fastqR2String: "comma-separated string of R2 fastq locations for the sample in question"
+
+    R1Locations: "array of file objects corresponding to the provided R1 fastq's"
+    R2Locations: "array of file objects corresponding to the provided R2 fastq's"
+  }
 }
 
+# Concatenates the provided fastq files into a single fastq
 task ConcatenateFastQs {
   input {
     String base_file_name
@@ -118,8 +144,18 @@ task ConcatenateFastQs {
     memory: "2GB"
     cpu: "2"
   }
+
+  parameter_meta {
+    base_file_name: "base file name to use when saving results"
+    fastqR1Array: "array of R1 fastq files to concatenate"
+    fastqR2Array: "array of R2 fastq files to concatenate"
+
+    R1fastq: "final concatenated R1 fastq file"
+    R2fastq: "final concatenated R2 fastq file"
+  }
 }
 
+# Aligns reads using STAR's two-pass methodology
 task STARalignTwoPass {
   input {
     File star_genome_refs_zipped
@@ -165,8 +201,25 @@ task STARalignTwoPass {
     memory: "62 GB"
     cpu: "8"
   }
+
+  parameter_meta {
+    star_genome_refs_zipped: "compressed zip file containing the reference files necessary for STAR"
+    r1fastq: "R1 fastq containing raw reads to align via STAR"
+    r2fastq: "R2 fastq containing raw reads to align via STAR"
+    base_file_name: "base file name to use when saving results"
+    referenceGenome: "name of the reference genome being used"
+
+    bam: ""
+    bai: ""
+    geneCounts: ""
+    log_final: ""
+    log_progress: ""
+    log: ""
+    SJout: ""
+  }
 }
 
+# Calculates relevant RNA QC statistics using RNASeQC
 # Make sure to collapse your exon-based gtf into a gene-based gtf via the script below:
 # https://github.com/broadinstitute/gtex-pipeline/blob/master/gene_model/collapse_annotation.py
 task RNASeQC {
@@ -191,5 +244,14 @@ task RNASeQC {
     docker: "ghcr.io/getwilds/rnaseqc:2.4.2"
     memory: "4 GB"
     cpu: "2"
+  }
+
+  parameter_meta {
+    bam_file: "aligned bam file to be QC-analyzed"
+    bam_index: "corresponding index file for the bam file"
+    refGtf: "gene-based gtf annotation file providing the genomic location of each gene"
+    base_file_name: "base file name to use when saving results"
+
+    rnaseqc_metrics: "tar file containing RNA QC data for the sample in question"
   }
 }
