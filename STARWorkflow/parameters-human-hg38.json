@@ -1,5 +1,0 @@
-{
-  "STAR2Pass.referenceGenome": "hg38",
-  "STAR2Pass.STARgenomeTAR": "s3://fh-ctr-public-reference-data/genome_data/human/hg38/STAR2.7.1_hg38.tgz",
-  "STAR2Pass.RNASeQC_genesGtf": "s3://fh-ctr-public-reference-data/genome_data/human/hg38/hg38_refseq_ucsc.gtf"
-}
