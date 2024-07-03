@@ -197,7 +197,7 @@ task STARalignTwoPass {
   }
 
   runtime {
-    docker: "ghcr.io/getwilds/star:2.7.6a"
+    docker: "getwilds/star:2.7.6a"
     memory: "62 GB"
     cpu: "8"
   }
@@ -241,7 +241,7 @@ task RNASeQC {
   }
 
   runtime {
-    docker: "ghcr.io/getwilds/rnaseqc:2.4.2"
+    docker: "getwilds/rnaseqc:2.4.2"
     memory: "4 GB"
     cpu: "2"
   }
