@@ -8,14 +8,17 @@ This WILDS WDL workflow performs alignment using the [two-pass methodology](http
 
 For Fred Hutch users that are new to WDL, we recommend using [PROOF](https://sciwiki.fredhutch.org/dasldemos/proof-how-to/) to submit this workflow directly to the on-premise HPC cluster, as it simplifies interaction with Cromwell and provides a user-friendly front-end for job submission and tracking. To do this:
 
-1. Start by cloning/downloading a copy of this repository to your local machine (click "Code", then click "Download ZIP").
+1. Start by either cloning or downloading a copy of this repository to your local machine.
+    - Cloning: `git clone https://github.com/getwilds/ww-star-deseq2.git`
+    - Downloading: Click the green "Code" button in the top right corner, then click "Download ZIP".
 2. Update [`ww-star-deseq2-inputs.json`](https://github.com/getwilds/ww-star-deseq2/blob/main/ww-star-deseq2-inputs.json) with your sample names (`omics_sample_name`) and FASTQ file paths (`R1` and `R2`).
-3. Update [`ww-star-deseq2-options.json`](https://github.com/getwilds/ww-star-deseq2/blob/main/ww-star-deseq2-inputs.json) with your preferred location for output data to be saved to (see `final_workflow_outputs_dir` field).
+3. Update [`ww-star-deseq2-options.json`](https://github.com/getwilds/ww-star-deseq2/blob/main/ww-star-deseq2-inputs.json) with your preferred location for output data to be saved to (`final_workflow_outputs_dir`).
 4. Submit the WDL file along with your custom json's to the Fred Hutch cluster via PROOF by following our [SciWiki documentation](https://sciwiki.fredhutch.org/dasldemos/proof-how-to/).
 
 Additional Notes:
 - Keep in mind that all file paths in the jsons must be visible to the Fred Hutch cluster, e.g. `/fh/fast/`, AWS S3 bucket. Input file paths on your local machine won't work in PROOF.
 - Specific reference genome files can be provided as inputs, but if none are provided, the workflow will automatically download a GRCh38 reference genome and use that. For the first go-around, we recommend starting with the default reference files.
+- To avoid duplication of reference genome data, we highly recommend executing this workflow with call caching enabled in the options json (`write_to_cache`, `read_from_cache`, already set to `true` here).
 
 ## Advanced Usage
 
