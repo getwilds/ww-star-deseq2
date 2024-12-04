@@ -1,6 +1,9 @@
 {
-  "STAR2Pass.batch_file": "input_manifest.tsv",
-  "STAR2Pass.ref_genome": "GRCh38.gencode.v31",
-  "STAR2Pass.star_genome_tar": "path_to_reference_tarfile/STAR2.7.1_genomeGRCh38.gencode.v31.tgz",
-  "STAR2Pass.rnaseqc_genes_gtf": "path_to_ref_gtf/gencode.v31.genes.gtf"
+  "STAR2Pass.samples": [
+    {
+      "omics_sample_name": "SRR10724344",
+      "R1": "/path_to_input_data/SRR10724344_1.fastq.gz",
+      "R2": "/path_to_input_data/SRR10724344_2.fastq.gz"
+    }
+  ]
 }
