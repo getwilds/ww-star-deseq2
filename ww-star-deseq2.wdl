@@ -1,58 +1,59 @@
 version 1.0
-# Perform alignment via STAR two-pass methodology and analyze via DESeq2
 
-#### WORKFLOW DEFINITION
+struct SampleInfo {
+    String omics_sample_name
+    File R1
+    File R2
+}
+
+struct RefGenome {
+    String name
+    File fasta
+    File gtf
+}
 
 workflow STAR2Pass {
   input {
-    File batch_file
-    File star_genome_tar 
-    String ref_genome 
-    File rnaseqc_genes_gtf
+    Array[SampleInfo] samples
+    RefGenome? reference_genome
   }
 
-  Array[Object] batch_info = read_objects(batch_file)
+  if (!defined(reference_genome)) {
+    call DownloadReference {}
+  }
 
-  scatter (job in batch_info){
-    String sample_name = job.omics_sample_name
-    String molecular_id = job.molecular_id
-    String fastq_r1_locs = job.R1
-    String fastq_r2_locs = job.R2
-    String base_file_name = sample_name + "_" + molecular_id
+  RefGenome ref_genome_final = select_first([reference_genome, DownloadReference.genome])
 
-    call FindFastqs {
-      input:
-        fastq_r1_str=fastq_r1_locs, 
-        fastq_r2_str=fastq_r2_locs
-    }
+  call CollapseGTF {
+    input:
+      reference_gtf = ref_genome_final.gtf
+  }
 
-    call ConcatenateFastQs {
-      input: 
-        fastq_r1_array=FindFastqs.r1_locs, 
-        fastq_r2_array=FindFastqs.r2_locs, 
-        base_file_name=base_file_name
-    }
+  call BuildSTARIndex {
+    input:
+      reference_fasta = ref_genome_final.fasta,
+      reference_gtf = ref_genome_final.gtf
+  }
 
+  scatter (sample in samples) {
     call STARalignTwoPass {
       input:
-        base_file_name=base_file_name,
-        star_genome_refs_zipped=star_genome_tar,
-        r1fastq=ConcatenateFastQs.r1fastq,
-        r2fastq=ConcatenateFastQs.r2fastq,
-        ref_genome=ref_genome
+        base_file_name = sample.omics_sample_name,
+        star_genome_tar = BuildSTARIndex.star_index_tar,
+        r1fastq = sample.R1,
+        r2fastq = sample.R2,
+        ref_genome_name = ref_genome_final.name
     }
 
     call RNASeQC {
       input:
-        base_file_name=base_file_name,
-        bam_file=STARalignTwoPass.bam,
-        bam_index=STARalignTwoPass.bai,
-        ref_gtf=rnaseqc_genes_gtf
+        base_file_name = sample.omics_sample_name,
+        bam_file = STARalignTwoPass.bam,
+        bam_index = STARalignTwoPass.bai,
+        ref_gtf = CollapseGTF.collapsed_gtf
     }
+  }
 
-  } # End scatter 
-
-  # Outputs that will be retained when execution is complete
   output {
     Array[File] output_bam = STARalignTwoPass.bam
     Array[File] output_bai = STARalignTwoPass.bai
@@ -63,176 +64,174 @@ workflow STAR2Pass {
     Array[File] output_SJ = STARalignTwoPass.SJout
     Array[File] output_rnaseqc = RNASeQC.rnaseqc_metrics
   }
+}
 
-  parameter_meta {
-    batch_file: "input tsv describing the samples to be analyzed and the locations of their fastq files"
-    star_genome_tar: "reference genome files necessary for STAR analysis in tar file format"
-    ref_genome: "name of the reference genome"
-    rnaseqc_genes_gtf: "gene-based gtf annotation file providing the genomic location of each gene"
-
-    output_bam: "array of aligned bam files for each sample"
-    output_bai: "array of corresponding index files for each aligned bam file"
-    output_gene_counts: "array of text files containing the number of reads in each gene for each sample"
-    output_log_final: "array of text files containing an overarching summary of the analysis performed for each sample"
-    output_log_progress: "array of text files containing a detailed progress report for each sample"
-    output_log: "array of text files containing STAR's raw command line output for each sample"
-    output_SJ: "array of text files containing splice junction details for each sample being analyzed"
-    output_rnaseqc: "array of tar files containing RNA QC data for each sample being analyzed"
-  }
-} # End Workflow
-
-#### TASK DEFINITIONS
-
-# Locates the specified fastq files
-task FindFastqs {
-  input {
-    String fastq_r1_str
-    String fastq_r2_str
-  }
+task DownloadReference {
+  input {}
 
   command <<<
-    IFS="," read -ra ARR1 <<< "~{fastq_r1_str}"
-    for item in "${ARR1[@]}"; do  
-      echo "$item" >> R1out
-    done
-    IFS="," read -ra ARR2 <<< "~{fastq_r2_str}"
-    for item in "${ARR2[@]}"; do  
-      echo "$item" >> R2out
-    done
+    wget https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/latest_assembly_versions/GCF_000001405.40_GRCh38.p14/GCF_000001405.40_GRCh38.p14_genomic.fna.gz
+    wget https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/latest_assembly_versions/GCF_000001405.40_GRCh38.p14/GCF_000001405.40_GRCh38.p14_genomic.gtf.gz
+    gunzip GCF_000001405.40_GRCh38.p14_genomic.fna.gz
+    gunzip GCF_000001405.40_GRCh38.p14_genomic.gtf.gz
   >>>
 
   output {
-    Array[File] r1_locs = read_lines("R1out")
-    Array[File] r2_locs = read_lines("R2out")
+    RefGenome genome = object {
+      name: "hg38",
+      fasta: "GCF_000001405.40_GRCh38.p14_genomic.fna",
+      gtf: "GCF_000001405.40_GRCh38.p14_genomic.gtf"
+    }
   }
 
   runtime {
-    docker: "ubuntu:latest"
-    memory: "2 GB"
-    cpu: "2"
-  }
-
-  parameter_meta {
-    fastq_r1_str: "comma-separated string of R1 fastq locations for the sample in question"
-    fastq_r2_str: "comma-separated string of R2 fastq locations for the sample in question"
-
-    r1_locs: "array of file objects corresponding to the provided R1 fastq's"
-    r2_locs: "array of file objects corresponding to the provided R2 fastq's"
+    docker: "getwilds/gtf-smash:latest"
+    memory: "4 GB"
+    cpu: "1"
   }
 }
 
-# Concatenates the provided fastq files into a single fastq
-task ConcatenateFastQs {
+task BuildSTARIndex {
   input {
-    String base_file_name
-    Array[File] fastq_r1_array
-    Array[File] fastq_r2_array
+    File reference_fasta
+    File reference_gtf
+    Int sjdbOverhang = 100
+    Int genomeSAindexNbases = 14
+    Int memory_gb = 64
+    Int cpu_cores = 8
   }
-
-  command <<<
-    cat ~{sep=' ' fastq_r1_array} > "~{base_file_name}.R1.fastq.gz"
-    cat ~{sep=' ' fastq_r2_array} > "~{base_file_name}.R2.fastq.gz"
-  >>>
-
-  output {
-    File r1fastq = "~{base_file_name}.R1.fastq.gz"
-    File r2fastq = "~{base_file_name}.R2.fastq.gz"
-  }
-
-  runtime {
-    docker: "ubuntu:latest"
-    memory: "2GB"
-    cpu: "2"
-  }
-
-  parameter_meta {
-    base_file_name: "base file name to use when saving results"
-    fastq_r1_array: "array of R1 fastq files to concatenate"
-    fastq_r2_array: "array of R2 fastq files to concatenate"
-
-    r1fastq: "final concatenated R1 fastq file"
-    r2fastq: "final concatenated R2 fastq file"
-  }
-}
-
-# Aligns reads using STAR's two-pass methodology
-task STARalignTwoPass {
-  input {
-    File star_genome_refs_zipped
-    File r1fastq
-    File r2fastq
-    String base_file_name
-    String ref_genome
-  }
-
-  String star_db_dir = basename(star_genome_refs_zipped, ".tar.gz")
 
   command <<<
     set -eo pipefail
-    tar -xzf "~{star_genome_refs_zipped}"
+    
+    mkdir star_index
+
+    echo "Building STAR index..."
     STAR \
-      --genomeDir "~{star_db_dir}" \
-      --readFilesIn "~{r1fastq}" "~{r2fastq}" \
-      --runThreadN 6 \
-      --readFilesCommand zcat \
-      --sjdbOverhang 100 \
-      --outSAMtype BAM SortedByCoordinate \
-      --twopassMode Basic \
-      --quantMode GeneCounts \
-      --quantTranscriptomeBAMcompression 5 
-    mv Aligned.sortedByCoord.out.bam "~{base_file_name}.~{ref_genome}.Aligned.sortedByCoord.out.bam"
-    mv ReadsPerGene.out.tab "~{base_file_name}.~{ref_genome}.ReadsPerGene.out.tab"
-    mv Log.final.out "~{base_file_name}.~{ref_genome}.Log.final.out"
-    samtools index "~{base_file_name}.~{ref_genome}.Aligned.sortedByCoord.out.bam"
+      --runMode genomeGenerate \
+      --runThreadN ~{cpu_cores} \
+      --genomeDir star_index \
+      --genomeFastaFiles ~{reference_fasta} \
+      --sjdbGTFfile ~{reference_gtf} \
+      --sjdbOverhang ~{sjdbOverhang} \
+      --genomeSAindexNbases ~{genomeSAindexNbases}
+
+    tar -czf star_index.tar.gz star_index/
   >>>
 
   output {
-    File bam = "~{base_file_name}.~{ref_genome}.Aligned.sortedByCoord.out.bam"
-    File bai = "~{base_file_name}.~{ref_genome}.Aligned.sortedByCoord.out.bam.bai"
-    File geneCounts = "~{base_file_name}.~{ref_genome}.ReadsPerGene.out.tab"
-    File log_final = "~{base_file_name}.~{ref_genome}.Log.final.out"
-    File log_progress = "Log.progress.out"
-    File log = "Log.out"
-    File SJout = "SJ.out.tab"
+    File star_index_tar = "star_index.tar.gz"
   }
 
   runtime {
     docker: "getwilds/star:2.7.6a"
-    memory: "62 GB"
-    cpu: "8"
-  }
-
-  parameter_meta {
-    star_genome_refs_zipped: "compressed zip file containing the reference files necessary for STAR"
-    r1fastq: "R1 fastq containing raw reads to align via STAR"
-    r2fastq: "R2 fastq containing raw reads to align via STAR"
-    base_file_name: "base file name to use when saving results"
-    ref_genome: "name of the reference genome being used"
-
-    bam: "aligned bam files for the sample in question produced by STAR"
-    bai: "corresponding index file for the bam file"
-    geneCounts: "text file containing the number of reads in each gene"
-    log_final: "text file containing an overarching summary of the analysis performed"
-    log_progress: "text file containing a detailed progress report"
-    log: "text file containing STAR's raw command line output"
-    SJout: "text file containing splice junction details"
+    memory: "~{memory_gb} GB"
+    cpu: "~{cpu_cores}"
   }
 }
 
-# Calculates relevant RNA QC statistics using RNASeQC
-# Make sure to collapse your exon-based gtf into a gene-based gtf via the script below:
-# https://github.com/broadinstitute/gtex-pipeline/blob/master/gene_model/collapse_annotation.py
+task CollapseGTF {
+  input {
+    File reference_gtf
+  }
+
+  command <<<
+    set -eo pipefail
+    
+    echo "Processing GTF file..."
+    collapse_annotation.py \
+      ~{reference_gtf} \
+      collapsed.gtf
+  >>>
+
+  output {
+    File collapsed_gtf = "collapsed.gtf"
+  }
+
+  runtime {
+    docker: "getwilds/gtf-smash:latest"
+    memory: "4 GB"
+    cpu: "1"
+  }
+}
+
+task STARalignTwoPass {
+  input {
+    File star_genome_tar
+    File r1fastq
+    File r2fastq
+    String base_file_name
+    String ref_genome_name
+    Int memory_gb = 62
+    Int cpu_cores = 8
+    Int star_threads = 6
+  }
+
+  command <<<
+    set -eo pipefail
+
+    echo "Extracting STAR reference..."
+    tar -xvf "~{star_genome_tar}"
+
+    echo "Starting STAR alignment..."
+    STAR \
+      --genomeDir star_index \
+      --readFilesIn "~{r1fastq}" "~{r2fastq}" \
+      --runThreadN ~{star_threads} \
+      --readFilesCommand zcat \
+      --sjdbOverhang 100 \
+      --outSAMtype BAM SortedByCoordinate \
+      --twopassMode Basic \
+      --outTmpDir _STARtmp \
+      --outFileNamePrefix "./" \
+      --quantMode GeneCounts \
+      --quantTranscriptomeBAMcompression 5 
+
+    rm -r star_index _STARtmp
+
+    mv Aligned.sortedByCoord.out.bam "~{base_file_name}.~{ref_genome_name}.Aligned.sortedByCoord.out.bam"
+    mv ReadsPerGene.out.tab "~{base_file_name}.~{ref_genome_name}.ReadsPerGene.out.tab"
+    mv Log.final.out "~{base_file_name}.~{ref_genome_name}.Log.final.out"
+    mv Log.progress.out "~{base_file_name}.~{ref_genome_name}.Log.progress.out"
+    mv Log.out "~{base_file_name}.~{ref_genome_name}.Log.out"
+    mv SJ.out.tab "~{base_file_name}.~{ref_genome_name}.SJ.out.tab"
+
+    samtools index "~{base_file_name}.~{ref_genome_name}.Aligned.sortedByCoord.out.bam"
+  >>>
+
+  output {
+    File bam = "~{base_file_name}.~{ref_genome_name}.Aligned.sortedByCoord.out.bam"
+    File bai = "~{base_file_name}.~{ref_genome_name}.Aligned.sortedByCoord.out.bam.bai"
+    File geneCounts = "~{base_file_name}.~{ref_genome_name}.ReadsPerGene.out.tab"
+    File log_final = "~{base_file_name}.~{ref_genome_name}.Log.final.out"
+    File log_progress = "~{base_file_name}.~{ref_genome_name}.Log.progress.out"
+    File log = "~{base_file_name}.~{ref_genome_name}.Log.out"
+    File SJout = "~{base_file_name}.~{ref_genome_name}.SJ.out.tab"
+  }
+
+  runtime {
+    docker: "getwilds/star:2.7.6a"
+    memory: "~{memory_gb} GB"
+    cpu: "~{cpu_cores}"
+  }
+}
+
 task RNASeQC {
   input {
     File bam_file
     File bam_index
     File ref_gtf
     String base_file_name
+    Int memory_gb = 4
+    Int cpu_cores = 2
   }
 
   command <<<
+    echo "Running RNA-SeQC..."
     rnaseqc "~{ref_gtf}" "~{bam_file}" OUTPUT \
-      --sample="~{base_file_name}" --coverage 
+      --sample="~{base_file_name}" \
+      --coverage 
+
     tar -cvzf "~{base_file_name}.QC.tar.gz" OUTPUT/*
   >>>
 
@@ -242,16 +241,7 @@ task RNASeQC {
 
   runtime {
     docker: "getwilds/rnaseqc:2.4.2"
-    memory: "4 GB"
-    cpu: "2"
-  }
-
-  parameter_meta {
-    bam_file: "aligned bam file to be QC-analyzed"
-    bam_index: "corresponding index file for the bam file"
-    ref_gtf: "gene-based gtf annotation file providing the genomic location of each gene"
-    base_file_name: "base file name to use when saving results"
-
-    rnaseqc_metrics: "tar file containing RNA QC data for the sample in question"
+    memory: "~{memory_gb} GB"
+    cpu: "~{cpu_cores}"
   }
 }
