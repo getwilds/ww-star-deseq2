@@ -1,2 +1,0 @@
-omics_sample_name	molecular_id	R1	R2
-SRR10724344	TEST	/path_to_inputs/SRR10724344_1.fastq.gz	/path_to_inputs/SRR10724344_2.fastq.gz
