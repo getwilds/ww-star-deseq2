@@ -54,6 +54,12 @@ workflow STAR2Pass {
     }
   }
 
+  call CombineCountMatricesPython {
+    input:
+      gene_count_files = STARalignTwoPass.geneCounts,
+      sample_names = samples.omics_sample_name
+  }
+
   output {
     Array[File] output_bam = STARalignTwoPass.bam
     Array[File] output_bai = STARalignTwoPass.bai
@@ -63,6 +69,8 @@ workflow STAR2Pass {
     Array[File] output_log = STARalignTwoPass.log
     Array[File] output_SJ = STARalignTwoPass.SJout
     Array[File] output_rnaseqc = RNASeQC.rnaseqc_metrics
+    File combined_counts_matrix = CombineCountMatricesPython.counts_matrix
+    File sample_metadata_template = CombineCountMatricesPython.sample_metadata
   }
 }
 
@@ -241,6 +249,88 @@ task RNASeQC {
 
   runtime {
     docker: "getwilds/rnaseqc:2.4.2"
+    memory: "~{memory_gb} GB"
+    cpu: "~{cpu_cores}"
+  }
+}
+
+task CombineCountMatricesPython {
+  input {
+    Array[File] gene_count_files
+    Array[String] sample_names
+    Int memory_gb = 4
+    Int cpu_cores = 1
+    # Column to extract from ReadsPerGene.out.tab files:
+    # 2 = unstranded counts
+    # 3 = stranded counts, first read forward
+    # 4 = stranded counts, first read reverse
+    Int count_column = 2
+  }
+
+  command <<<
+    #!/usr/bin/env python3
+    
+    import pandas as pd
+    import os
+    import sys
+    
+    # Get the list of gene count files and sample names
+    count_files = ["~{sep='","' gene_count_files}"]
+    sample_names = ["~{sep='","' sample_names}"]
+    count_column = ~{count_column}
+    
+    print(f"Processing {len(count_files)} count files...")
+    
+    # Function to read STAR gene count file
+    def read_star_counts(file_path, sample_name, count_col):
+        # Skip the first 4 lines (summary statistics)
+        df = pd.read_csv(file_path, sep='\t', skiprows=4, header=None)
+        
+        # Select only gene ID column and the requested count column
+        df = df.iloc[:, [0, count_col-1]]
+        
+        # Name the columns
+        df.columns = ['gene_id', sample_name]
+        
+        return df
+    
+    # Read the first file to get the gene list
+    print(f"Reading first file: {os.path.basename(count_files[0])}")
+    combined = read_star_counts(count_files[0], sample_names[0], count_column)
+    
+    # Add the rest of the samples
+    if len(count_files) > 1:
+        for i in range(1, len(count_files)):
+            print(f"Reading file {i+1}/{len(count_files)}: {os.path.basename(count_files[i])}")
+            sample_counts = read_star_counts(count_files[i], sample_names[i], count_column)
+            combined = pd.merge(combined, sample_counts, on='gene_id')
+    
+    # Write out the combined matrix
+    print(f"Writing combined matrix to {output_name}...")
+    combined.to_csv("combined_counts_matrix.txt", sep='\t', index=False)
+    
+    # Create a sample metadata template for DESeq2
+    metadata = pd.DataFrame({
+        'sample_id': sample_names,
+        'condition': ['condition'] * len(sample_names)
+    })
+    metadata.to_csv("sample_metadata_template.txt", sep='\t', index=False)
+    
+    # Print summary
+    print(f"Combined {len(sample_names)} samples into a single count matrix")
+    print(f"Total genes: {len(combined)}")
+    print("Output files:")
+    print(f"  - combined_counts_matrix.txt (main counts matrix)")
+    print("  - sample_metadata_template.txt (template for DESeq2 sample metadata)")
+  >>>
+
+  output {
+    File counts_matrix = "~{output_name}"
+    File sample_metadata = "sample_metadata_template.txt"
+  }
+
+  runtime {
+    docker: "python:3.9-slim"
     memory: "~{memory_gb} GB"
     cpu: "~{cpu_cores}"
   }
