@@ -56,8 +56,7 @@ workflow STAR2Pass {
 
   call CombineCountMatricesPython {
     input:
-      gene_count_files = STARalignTwoPass.geneCounts,
-      sample_names = samples.omics_sample_name
+      gene_count_files = STARalignTwoPass.geneCounts
   }
 
   output {
@@ -257,7 +256,6 @@ task RNASeQC {
 task CombineCountMatricesPython {
   input {
     Array[File] gene_count_files
-    Array[String] sample_names
     Int memory_gb = 4
     Int cpu_cores = 1
     # Column to extract from ReadsPerGene.out.tab files:
@@ -273,13 +271,23 @@ task CombineCountMatricesPython {
     import pandas as pd
     import os
     import sys
+    import re
     
-    # Get the list of gene count files and sample names
+    # Get the list of gene count files
     count_files = ["~{sep='","' gene_count_files}"]
-    sample_names = ["~{sep='","' sample_names}"]
     count_column = ~{count_column}
     
+    # Extract sample names from file paths
+    sample_names = []
+    for file_path in count_files:
+        # Extract the base filename from the path
+        basename = os.path.basename(file_path)
+        # Extract the sample name before the first dot
+        sample_name = basename.split('.')[0]
+        sample_names.append(sample_name)
+    
     print(f"Processing {len(count_files)} count files...")
+    print(f"Sample names extracted: {sample_names}")
     
     # Function to read STAR gene count file
     def read_star_counts(file_path, sample_name, count_col):
@@ -306,7 +314,7 @@ task CombineCountMatricesPython {
             combined = pd.merge(combined, sample_counts, on='gene_id')
     
     # Write out the combined matrix
-    print(f"Writing combined matrix to {output_name}...")
+    print("Writing combined matrix to combined_counts_matrix.txt...")
     combined.to_csv("combined_counts_matrix.txt", sep='\t', index=False)
     
     # Create a sample metadata template for DESeq2
@@ -320,12 +328,12 @@ task CombineCountMatricesPython {
     print(f"Combined {len(sample_names)} samples into a single count matrix")
     print(f"Total genes: {len(combined)}")
     print("Output files:")
-    print(f"  - combined_counts_matrix.txt (main counts matrix)")
+    print("  - combined_counts_matrix.txt (main counts matrix)")
     print("  - sample_metadata_template.txt (template for DESeq2 sample metadata)")
   >>>
 
   output {
-    File counts_matrix = "~{output_name}"
+    File counts_matrix = "combined_counts_matrix.txt"
     File sample_metadata = "sample_metadata_template.txt"
   }
 
