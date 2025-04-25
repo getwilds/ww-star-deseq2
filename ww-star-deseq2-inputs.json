@@ -10,5 +10,10 @@
       "R1": "/path_to_second_input/SRR12345678_1.fastq.gz",
       "R2": "/path_to_second_input/SRR12345678_2.fastq.gz"
     }
-  ]
+  ],
+  "STAR2Pass.reference_genome": {
+    "name": "SuperAwesomeGenome",
+    "fasta": "/path_to_ref_data/awesome_genome.fna",
+    "gtf": "/path_to_ref_data/awesome_transcripts.gtf"
+  }
 }

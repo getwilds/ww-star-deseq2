@@ -54,6 +54,11 @@ workflow STAR2Pass {
     }
   }
 
+  call CombineCountMatrices {
+    input:
+      gene_count_files = STARalignTwoPass.geneCounts
+  }
+
   output {
     Array[File] output_bam = STARalignTwoPass.bam
     Array[File] output_bai = STARalignTwoPass.bai
@@ -63,6 +68,8 @@ workflow STAR2Pass {
     Array[File] output_log = STARalignTwoPass.log
     Array[File] output_SJ = STARalignTwoPass.SJout
     Array[File] output_rnaseqc = RNASeQC.rnaseqc_metrics
+    File combined_counts_matrix = CombineCountMatrices.counts_matrix
+    File sample_metadata_template = CombineCountMatrices.sample_metadata
   }
 }
 
@@ -241,6 +248,38 @@ task RNASeQC {
 
   runtime {
     docker: "getwilds/rnaseqc:2.4.2"
+    memory: "~{memory_gb} GB"
+    cpu: "~{cpu_cores}"
+  }
+}
+
+task CombineCountMatrices {
+  input {
+    Array[File] gene_count_files
+    Int memory_gb = 4
+    Int cpu_cores = 1
+    # Column to extract from ReadsPerGene.out.tab files:
+    # 2 = unstranded counts
+    # 3 = stranded counts, first read forward
+    # 4 = stranded counts, first read reverse
+    Int count_column = 2
+  }
+
+  command <<<
+    combine_star_counts.py \
+      --input ~{sep=' ' gene_count_files} \
+      --output combined_counts_matrix.txt \
+      --metadata sample_metadata_template.txt \
+      --count_column ~{count_column}
+  >>>
+
+  output {
+    File counts_matrix = "combined_counts_matrix.txt"
+    File sample_metadata = "sample_metadata_template.txt"
+  }
+
+  runtime {
+    docker: "getwilds/combine-counts:0.1.0"
     memory: "~{memory_gb} GB"
     cpu: "~{cpu_cores}"
   }
