@@ -266,70 +266,11 @@ task CombineCountMatricesPython {
   }
 
   command <<<
-    #!/usr/bin/env python3
-    
-    import pandas as pd
-    import os
-    import sys
-    import re
-    
-    # Get the list of gene count files
-    count_files = ["~{sep='","' gene_count_files}"]
-    count_column = ~{count_column}
-    
-    # Extract sample names from file paths
-    sample_names = []
-    for file_path in count_files:
-        # Extract the base filename from the path
-        basename = os.path.basename(file_path)
-        # Extract the sample name before the first dot
-        sample_name = basename.split('.')[0]
-        sample_names.append(sample_name)
-    
-    print(f"Processing {len(count_files)} count files...")
-    print(f"Sample names extracted: {sample_names}")
-    
-    # Function to read STAR gene count file
-    def read_star_counts(file_path, sample_name, count_col):
-        # Skip the first 4 lines (summary statistics)
-        df = pd.read_csv(file_path, sep='\t', skiprows=4, header=None)
-        
-        # Select only gene ID column and the requested count column
-        df = df.iloc[:, [0, count_col-1]]
-        
-        # Name the columns
-        df.columns = ['gene_id', sample_name]
-        
-        return df
-    
-    # Read the first file to get the gene list
-    print(f"Reading first file: {os.path.basename(count_files[0])}")
-    combined = read_star_counts(count_files[0], sample_names[0], count_column)
-    
-    # Add the rest of the samples
-    if len(count_files) > 1:
-        for i in range(1, len(count_files)):
-            print(f"Reading file {i+1}/{len(count_files)}: {os.path.basename(count_files[i])}")
-            sample_counts = read_star_counts(count_files[i], sample_names[i], count_column)
-            combined = pd.merge(combined, sample_counts, on='gene_id')
-    
-    # Write out the combined matrix
-    print("Writing combined matrix to combined_counts_matrix.txt...")
-    combined.to_csv("combined_counts_matrix.txt", sep='\t', index=False)
-    
-    # Create a sample metadata template for DESeq2
-    metadata = pd.DataFrame({
-        'sample_id': sample_names,
-        'condition': ['condition'] * len(sample_names)
-    })
-    metadata.to_csv("sample_metadata_template.txt", sep='\t', index=False)
-    
-    # Print summary
-    print(f"Combined {len(sample_names)} samples into a single count matrix")
-    print(f"Total genes: {len(combined)}")
-    print("Output files:")
-    print("  - combined_counts_matrix.txt (main counts matrix)")
-    print("  - sample_metadata_template.txt (template for DESeq2 sample metadata)")
+    combine_star_counts.py \
+      --input ~{sep=' ' gene_count_files} \
+      --output combined_counts_matrix.txt \
+      --metadata sample_metadata_template.txt \
+      --count_column ~{count_column}
   >>>
 
   output {
@@ -338,7 +279,7 @@ task CombineCountMatricesPython {
   }
 
   runtime {
-    docker: "python:3.9-slim"
+    docker: "getwilds/combine-counts:latest"
     memory: "~{memory_gb} GB"
     cpu: "~{cpu_cores}"
   }
