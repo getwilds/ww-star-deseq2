@@ -18,5 +18,6 @@
     "fasta": "/path_to_ref_data/awesome_genome.fna",
     "gtf": "/path_to_ref_data/awesome_transcripts.gtf"
   },
-  "STAR2Pass.RunDESeq2.reference_level": "control"
+  "STAR2Pass.reference_level": "control",
+  "STAR2Pass.contrast": "condition,treatment,control"
 }

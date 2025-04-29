@@ -17,6 +17,8 @@ workflow STAR2Pass {
   input {
     Array[SampleInfo] samples
     RefGenome? reference_genome
+    String reference_level = ""
+    String contrast = ""
   }
 
   if (!defined(reference_genome)) {
@@ -64,7 +66,9 @@ workflow STAR2Pass {
   call RunDESeq2 {
     input:
       counts_matrix = CombineCountMatrices.counts_matrix,
-      sample_metadata = CombineCountMatrices.sample_metadata
+      sample_metadata = CombineCountMatrices.sample_metadata,
+      reference_level = reference_level,
+      contrast = contrast
   }
 
   output {
@@ -91,6 +95,7 @@ task DownloadReference {
   input {}
 
   command <<<
+    set -eo pipefail
     wget https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/latest_assembly_versions/GCF_000001405.40_GRCh38.p14/GCF_000001405.40_GRCh38.p14_genomic.fna.gz
     wget https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/latest_assembly_versions/GCF_000001405.40_GRCh38.p14/GCF_000001405.40_GRCh38.p14_genomic.gtf.gz
     gunzip GCF_000001405.40_GRCh38.p14_genomic.fna.gz
@@ -248,6 +253,8 @@ task RNASeQC {
   }
 
   command <<<
+    set -eo pipefail
+
     echo "Running RNA-SeQC..."
     rnaseqc "~{ref_gtf}" "~{bam_file}" OUTPUT \
       --sample="~{base_file_name}" \
@@ -281,6 +288,8 @@ task CombineCountMatrices {
   }
 
   command <<<
+    set -eo pipefail
+
     combine_star_counts.py \
       --input ~{sep=' ' gene_count_files} \
       --output combined_counts_matrix.txt \
@@ -313,6 +322,8 @@ task RunDESeq2 {
   }
 
   command <<<
+    set -eo pipefail
+    
     Rscript /deseq2_analysis.R \
       --counts_file="~{counts_matrix}" \
       --metadata_file="~{sample_metadata}" \
