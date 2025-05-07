@@ -336,7 +336,7 @@ task RunDESeq2 {
   output {
     File deseq2_results = "deseq2_results_all_genes.csv"
     File deseq2_significant = "deseq2_results_significant.csv"
-    File deseq2_normalized_counts = "deseq2_normalized_counts.csv"
+    File deseq2_normalized_counts = "deseq2_results_normalized_counts.csv"
     File deseq2_pca_plot = "deseq2_results_pca.pdf"
     File deseq2_volcano_plot = "deseq2_results_volcano.pdf"
     File deseq2_heatmap = "deseq2_results_heatmap.pdf"
