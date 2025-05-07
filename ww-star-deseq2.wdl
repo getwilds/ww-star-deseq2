@@ -304,7 +304,7 @@ task CombineCountMatrices {
   }
 
   runtime {
-    docker: "ghcr.io/tefirman/combine-counts:latest"
+    docker: "getwilds/combine-counts:latest"
     memory: "~{memory_gb} GB"
     cpu: "~{cpu_cores}"
   }
@@ -343,7 +343,7 @@ task RunDESeq2 {
   }
 
   runtime {
-    docker: "ghcr.io/tefirman/deseq2:latest"
+    docker: "getwilds/deseq2:latest"
     memory: "~{memory_gb} GB"
     cpu: "~{cpu_cores}"
   }
