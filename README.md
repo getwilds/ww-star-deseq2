@@ -1,18 +1,133 @@
-
 # ww-star-deseq2
 [![Project Status: Experimental – Useable, some support, not open to feedback, unstable API.](https://getwilds.org/badges/badges/experimental.svg)](https://getwilds.org/badges/#experimental)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This WILDS WDL workflow performs alignment using the [two-pass methodology](https://github.com/alexdobin/STAR/blob/master/doc/STARmanual.pdf) of [STAR](https://github.com/alexdobin/STAR) and subsequently analyzes that alignment via [DESeq2](https://bioconductor.org/packages/release/bioc/html/DESeq2.html). It is intended to be a relatively straightforward demonstration of an RNA sequencing pipeline within the context of the WILDS ecosystem.
+This WILDS WDL workflow performs RNA-seq analysis using STAR's two-pass alignment methodology and DESeq2 differential expression analysis. It is intended to be a straightforward demonstration of an RNA sequencing pipeline within the context of the WILDS ecosystem.
 
-## Basic Usage
+## Overview
 
-For Fred Hutch users that are new to WDL, we recommend using [PROOF](https://sciwiki.fredhutch.org/dasldemos/proof-how-to/) to submit this workflow directly to the on-premise HPC cluster, as it simplifies interaction with Cromwell and provides a user-friendly front-end for job submission and tracking. To do this:
+The workflow performs the following key steps:
+1. Optional automatic reference genome download (if not provided)
+2. GTF annotation collapsing for compatibility with RNA-SeQC
+3. STAR index building
+4. STAR two-pass alignment for each sample
+5. RNA-SeQC quality control analysis
+6. Combining gene count matrices
+7. DESeq2 differential expression analysis with visualization
+
+## Features
+
+- Two-pass STAR alignment for improved splice junction detection
+- Automatic reference genome download (optional)
+- Quality control with RNA-SeQC
+- Differential expression analysis with DESeq2
+- Visualization of results (PCA, volcano plots, heatmaps)
+- Compatible with the WILDS workflow ecosystem
+
+## Usage
+
+### Requirements
+
+- [Cromwell](https://cromwell.readthedocs.io/), [MiniWDL](https://github.com/chanzuckerberg/miniwdl), or another WDL-compatible workflow executor
+- Docker/Apptainer (the workflow uses WILDS Docker containers)
+
+### Basic Usage
+
+1. Create an inputs JSON file with your sample information:
+
+```json
+{
+  "STAR2Pass.samples": [
+    {
+      "name": "sample1",
+      "R1": "/path/to/sample1_1.fastq.gz",
+      "R2": "/path/to/sample1_2.fastq.gz",
+      "condition": "treatment"
+    },
+    {
+      "name": "sample2",
+      "R1": "/path/to/sample2_1.fastq.gz",
+      "R2": "/path/to/sample2_2.fastq.gz",
+      "condition": "control"
+    }
+  ],
+  "STAR2Pass.reference_level": "control",
+  "STAR2Pass.contrast": "condition,treatment,control"
+}
+```
+
+2. Run the workflow using your preferred WDL executor:
+
+```bash
+# Cromwell
+java -jar cromwell.jar run ww-star-deseq2.wdl --inputs ww-star-deseq2-inputs.json --options ww-star-deseq2-options.json
+
+# miniWDL
+miniwdl run ww-star-deseq2.wdl -i ww-star-deseq2-inputs.json
+```
+
+### Integration with SRA Downloads
+
+The workflow pairs well with the [ww-sra](https://github.com/getwilds/ww-sra) workflow for downloading data from NCBI's Sequence Read Archive.
+
+### Detailed Options
+
+The workflow accepts the following inputs:
+
+| Parameter | Description | Type | Required? | Default |
+|-----------|-------------|------|-----------|---------|
+| `samples` | Array of sample information objects | Array[SampleInfo] | Yes | - |
+| `reference_genome` | Reference genome information | RefGenome | No | GRCh38.p14 (auto-downloaded) |
+| `reference_level` | Reference level for DESeq2 | String | No | "" |
+| `contrast` | Contrast string for DESeq2 | String | No | "" |
+
+#### SampleInfo Structure
+
+Each entry in the `samples` array should contain:
+- `name`: Sample identifier
+- `R1`: Path to R1 FASTQ file
+- `R2`: Path to R2 FASTQ file
+- `condition`: Group/condition for differential expression
+
+#### RefGenome Structure (optional)
+
+If provided, the `reference_genome` should contain:
+- `name`: Reference genome name
+- `fasta`: Path to reference FASTA file
+- `gtf`: Path to reference GTF file
+
+### Output Files
+
+The workflow produces the following outputs:
+
+| Output | Description |
+|--------|-------------|
+| `output_bam` | Aligned BAM files for each sample |
+| `output_bai` | BAM indexes for each sample |
+| `output_geneCounts` | Raw gene counts for each sample |
+| `output_log_final` | STAR final logs |
+| `output_log_progress` | STAR progress logs |
+| `output_log` | STAR main logs |
+| `output_SJ` | STAR splice junction files |
+| `output_rnaseqc` | RNA-SeQC quality metrics |
+| `combined_counts_matrix` | Combined gene counts matrix |
+| `sample_metadata` | Sample metadata table |
+| `deseq2_all_results` | Complete DESeq2 results |
+| `deseq2_significant_results` | Filtered significant DESeq2 results |
+| `deseq2_normalized_counts` | DESeq2 normalized counts |
+| `deseq2_pca_plot` | PCA plot of samples |
+| `deseq2_volcano_plot` | Volcano plot of differential expression |
+| `deseq2_heatmap` | Heatmap of differentially expressed genes |
+
+## For Fred Hutch Users
+
+For Fred Hutch users, we recommend using [PROOF](https://sciwiki.fredhutch.org/dasldemos/proof-how-to/) to submit this workflow directly to the on-premise HPC cluster. To do this:
 
 1. Start by either cloning or downloading a copy of this repository to your local machine.
     - Cloning: `git clone https://github.com/getwilds/ww-star-deseq2.git`
     - Downloading: Click the green "Code" button in the top right corner, then click "Download ZIP".
-2. Update [`ww-star-deseq2-inputs.json`](https://github.com/getwilds/ww-star-deseq2/blob/main/ww-star-deseq2-inputs.json) with your sample names (`omics_sample_name`) and FASTQ file paths (`R1` and `R2`).
-3. Update [`ww-star-deseq2-options.json`](https://github.com/getwilds/ww-star-deseq2/blob/main/ww-star-deseq2-inputs.json) with your preferred location for output data to be saved to (`final_workflow_outputs_dir`).
+2. Update `ww-star-deseq2-inputs.json` with your sample names, FASTQ file paths, and conditions.
+3. Update `ww-star-deseq2-options.json` with your preferred location for output data to be saved to (`final_workflow_outputs_dir`).
 4. Submit the WDL file along with your custom json's to the Fred Hutch cluster via PROOF by following our [SciWiki documentation](https://sciwiki.fredhutch.org/dasldemos/proof-how-to/).
 
 Additional Notes:
@@ -20,13 +135,17 @@ Additional Notes:
 - Specific reference genome files can be provided as inputs, but if none are provided, the workflow will automatically download a GRCh38 reference genome and use that. For the first go-around, we recommend starting with the default reference files.
 - To avoid duplication of reference genome data, we highly recommend executing this workflow with call caching enabled in the options json (`write_to_cache`, `read_from_cache`, already set to `true` here).
 
-## Advanced Usage
+## Docker Containers
 
-For users outside of Fred Hutch or more advanced users who would like to run the workflow locally, command line execution is relatively straightforward: 
-```
-java -jar cromwell-86.jar run ww-star-deseq2.wdl --inputs ww-star-deseq2-inputs.json --options ww-star-deseq2-options.json
-```
-Although Cromwell is demonstrated here, this pipeline is not specific to Cromwell and can be run using whichever WDL execution method you prefer ([miniwdl](https://github.com/chanzuckerberg/miniwdl), [Terra](https://terra.bio/), [HealthOmics](https://docs.aws.amazon.com/omics/latest/dev/workflows.html), etc.).
+This workflow uses the following Docker containers from the [WILDS Docker Library](https://github.com/getwilds/wilds-docker-library):
+
+- `getwilds/star:2.7.6a` - For STAR alignment
+- `getwilds/rnaseqc:2.4.2` - For RNA-SeQC quality control
+- `getwilds/gtf-smash:latest` - For GTF processing
+- `getwilds/combine-counts:latest` - For combining count matrices
+- `getwilds/deseq2:latest` - For differential expression analysis
+
+All containers are available on both DockerHub and GitHub Container Registry.
 
 ## Support
 
@@ -34,7 +153,7 @@ For questions, bugs, and/or feature requests, reach out to the Fred Hutch Data S
 
 ## Contributing
 
-If you would like to contribute to this WILDS WDL workflow, see our [contribution guidelines](.github/CONTRIBUTING.md) as well out our [WILDS Contributor Guide](https://getwilds.org/guide/) for more details.
+If you would like to contribute to this WILDS WDL workflow, see our [contribution guidelines](.github/CONTRIBUTING.md) as well as our [WILDS Contributor Guide](https://getwilds.org/guide/) for more details.
 
 ## License
 
