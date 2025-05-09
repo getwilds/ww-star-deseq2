@@ -269,8 +269,8 @@ task star_align_two_pass {
   }
 
   input {
-    SampleInfo sample_data
     File star_genome_tar
+    SampleInfo sample_data
     String ref_genome_name
     Int sjdb_overhang = 100
     Int memory_gb = 62
@@ -378,6 +378,23 @@ task rnaseqc_cov {
 }
 
 task combine_count_matrices {
+  meta {
+    description: "Task for aligning RNA-seq reads using STAR's two-pass technique."
+    outputs: {
+        counts_matrix: "",
+        sample_metadata: ""
+    }
+  }
+
+  parameter_meta {
+    gene_count_files: ""
+    sample_names: ""
+    sample_conditions: ""
+    memory_gb: ""
+    cpu_cores: ""
+    count_column: ""
+  }
+
   input {
     Array[File] gene_count_files
     Array[String] sample_names
