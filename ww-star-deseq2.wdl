@@ -27,8 +27,7 @@ workflow star_deseq2 {
 
   RefGenome ref_genome_final = select_first([reference_genome, DownloadReference.genome])
 
-  call CollapseGTF {
-    input:
+  call CollapseGTF { input:
       reference_gtf = ref_genome_final.gtf
   }
 
