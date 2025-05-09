@@ -22,64 +22,59 @@ workflow star_deseq2 {
   }
 
   if (!defined(reference_genome)) {
-    call DownloadReference {}
+    call download_reference {}
   }
 
-  RefGenome ref_genome_final = select_first([reference_genome, DownloadReference.genome])
+  RefGenome ref_genome_final = select_first([reference_genome, download_reference.genome])
 
-  call CollapseGTF { input:
+  call collapse_gtf { input:
       reference_gtf = ref_genome_final.gtf
   }
 
-  call BuildSTARIndex {
-    input:
+  call build_star_index { input:
       reference_fasta = ref_genome_final.fasta,
       reference_gtf = ref_genome_final.gtf
   }
 
   scatter (sample in samples) {
-    call STARalignTwoPass {
-      input:
+    call star_align_two_pass { input:
         sample_data = sample,
-        star_genome_tar = BuildSTARIndex.star_index_tar,
+        star_genome_tar = build_star_index.star_index_tar,
         ref_genome_name = ref_genome_final.name
     }
 
-    call RNASeQC {
-      input:
+    call rnaseqc_cov { input:
         base_file_name = sample.name,
-        bam_file = STARalignTwoPass.bam,
-        bam_index = STARalignTwoPass.bai,
-        ref_gtf = CollapseGTF.collapsed_gtf
+        bam_file = star_align_two_pass.bam,
+        bam_index = star_align_two_pass.bai,
+        ref_gtf = collapse_gtf.collapsed_gtf
     }
   }
 
-  call CombineCountMatrices {
-    input:
-      gene_count_files = STARalignTwoPass.geneCounts,
-      sample_names = STARalignTwoPass.name,
-      sample_conditions = STARalignTwoPass.condition
+  call combine_count_matrices { input:
+      gene_count_files = star_align_two_pass.gene_counts,
+      sample_names = star_align_two_pass.name,
+      sample_conditions = star_align_two_pass.condition
   }
 
-  call run_deseq2 {
-    input:
-      counts_matrix = CombineCountMatrices.counts_matrix,
-      sample_metadata = CombineCountMatrices.sample_metadata,
+  call run_deseq2 { input:
+      counts_matrix = combine_count_matrices.counts_matrix,
+      sample_metadata = combine_count_matrices.sample_metadata,
       reference_level = reference_level,
       contrast = contrast
   }
 
   output {
-    Array[File] output_bam = STARalignTwoPass.bam
-    Array[File] output_bai = STARalignTwoPass.bai
-    Array[File] output_geneCounts = STARalignTwoPass.geneCounts
-    Array[File] output_log_final = STARalignTwoPass.log_final
-    Array[File] output_log_progress = STARalignTwoPass.log_progress
-    Array[File] output_log = STARalignTwoPass.log
-    Array[File] output_SJ = STARalignTwoPass.SJout
-    Array[File] output_rnaseqc = RNASeQC.rnaseqc_metrics
-    File combined_counts_matrix = CombineCountMatrices.counts_matrix
-    File sample_metadata = CombineCountMatrices.sample_metadata
+    Array[File] star_bam = star_align_two_pass.bam
+    Array[File] star_bai = star_align_two_pass.bai
+    Array[File] star_gene_counts = star_align_two_pass.gene_counts
+    Array[File] star_log_final = star_align_two_pass.log_final
+    Array[File] star_log_progress = star_align_two_pass.log_progress
+    Array[File] star_log = star_align_two_pass.log
+    Array[File] star_sj = star_align_two_pass.sj_out
+    Array[File] rnaseqc_metrics = rnaseqc_cov.rnaseqc_metrics
+    File combined_counts_matrix = combine_count_matrices.counts_matrix
+    File sample_metadata = combine_count_matrices.sample_metadata
     File deseq2_all_results = run_deseq2.deseq2_results
     File deseq2_significant_results = run_deseq2.deseq2_significant
     File deseq2_normalized_counts = run_deseq2.deseq2_normalized_counts
@@ -89,7 +84,7 @@ workflow star_deseq2 {
   }
 }
 
-task DownloadReference {
+task download_reference {
   input {}
 
   command <<<
@@ -115,12 +110,12 @@ task DownloadReference {
   }
 }
 
-task BuildSTARIndex {
+task build_star_index {
   input {
     File reference_fasta
     File reference_gtf
-    Int sjdbOverhang = 100
-    Int genomeSAindexNbases = 14
+    Int sjdb_overhang = 100
+    Int genome_sa_index_nbases = 14
     Int memory_gb = 64
     Int cpu_cores = 8
   }
@@ -135,10 +130,10 @@ task BuildSTARIndex {
       --runMode genomeGenerate \
       --runThreadN ~{cpu_cores} \
       --genomeDir star_index \
-      --genomeFastaFiles ~{reference_fasta} \
-      --sjdbGTFfile ~{reference_gtf} \
-      --sjdbOverhang ~{sjdbOverhang} \
-      --genomeSAindexNbases ~{genomeSAindexNbases}
+      --genomeFastaFiles "~{reference_fasta}" \
+      --sjdbGTFfile "~{reference_gtf}" \
+      --sjdbOverhang ~{sjdb_overhang} \
+      --genomeSAindexNbases ~{genome_sa_index_nbases}
 
     tar -czf star_index.tar.gz star_index/
   >>>
@@ -154,7 +149,7 @@ task BuildSTARIndex {
   }
 }
 
-task CollapseGTF {
+task collapse_gtf {
   input {
     File reference_gtf
   }
@@ -164,7 +159,7 @@ task CollapseGTF {
     
     echo "Processing GTF file..."
     collapse_annotation.py \
-      ~{reference_gtf} \
+      "~{reference_gtf}" \
       collapsed.gtf
   >>>
 
@@ -179,11 +174,12 @@ task CollapseGTF {
   }
 }
 
-task STARalignTwoPass {
+task star_align_two_pass {
   input {
     SampleInfo sample_data
     File star_genome_tar
     String ref_genome_name
+    Int sjdb_overhang = 100
     Int memory_gb = 62
     Int cpu_cores = 8
     Int star_threads = 6
@@ -201,7 +197,7 @@ task STARalignTwoPass {
       --readFilesIn "~{sample_data.r1}" "~{sample_data.r2}" \
       --runThreadN ~{star_threads} \
       --readFilesCommand zcat \
-      --sjdbOverhang 100 \
+      --sjdbOverhang ~{sjdb_overhang} \
       --outSAMtype BAM SortedByCoordinate \
       --twopassMode Basic \
       --outTmpDir _STARtmp \
@@ -226,11 +222,11 @@ task STARalignTwoPass {
     String condition = sample_data.condition
     File bam = "~{sample_data.name}.~{ref_genome_name}.Aligned.sortedByCoord.out.bam"
     File bai = "~{sample_data.name}.~{ref_genome_name}.Aligned.sortedByCoord.out.bam.bai"
-    File geneCounts = "~{sample_data.name}.~{ref_genome_name}.ReadsPerGene.out.tab"
+    File gene_counts = "~{sample_data.name}.~{ref_genome_name}.ReadsPerGene.out.tab"
     File log_final = "~{sample_data.name}.~{ref_genome_name}.Log.final.out"
     File log_progress = "~{sample_data.name}.~{ref_genome_name}.Log.progress.out"
     File log = "~{sample_data.name}.~{ref_genome_name}.Log.out"
-    File SJout = "~{sample_data.name}.~{ref_genome_name}.SJ.out.tab"
+    File sj_out = "~{sample_data.name}.~{ref_genome_name}.SJ.out.tab"
   }
 
   runtime {
@@ -240,7 +236,7 @@ task STARalignTwoPass {
   }
 }
 
-task RNASeQC {
+task rnaseqc_cov {
   input {
     File bam_file
     File bam_index
@@ -272,27 +268,27 @@ task RNASeQC {
   }
 }
 
-task CombineCountMatrices {
+task combine_count_matrices {
   input {
     Array[File] gene_count_files
     Array[String] sample_names
     Array[String] sample_conditions
     Int memory_gb = 4
     Int cpu_cores = 1
+    Int count_column = 2
     # Column to extract from ReadsPerGene.out.tab files:
     # 2 = unstranded counts
     # 3 = stranded counts, first read forward
     # 4 = stranded counts, first read reverse
-    Int count_column = 2
   }
 
   command <<<
     set -eo pipefail
 
     combine_star_counts.py \
-      --input ~{sep=' ' gene_count_files} \
-      --names ~{sep=' ' sample_names} \
-      --conditions ~{sep=' ' sample_conditions} \
+      --input "~{sep=' ' gene_count_files}" \
+      --names "~{sep=' ' sample_names}" \
+      --conditions "~{sep=' ' sample_conditions}" \
       --output combined_counts_matrix.txt \
       --count_column ~{count_column}
   >>>
