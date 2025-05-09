@@ -14,6 +14,38 @@ struct RefGenome {
 }
 
 workflow star_deseq2 {
+  meta {
+    author: "Taylor Firman"
+    email: "tfirman@fredhutch.org"
+    description: "WDL workflow for RNA-seq alignment via STAR and DESeq2 differential expression analysis"
+    url: "https://github.com/getwilds/ww-star-deseq2"
+    outputs: {
+        star_bam: "",
+        star_bai: "",
+        star_gene_counts: "",
+        star_log_final: "",
+        star_log_progress: "",
+        star_log: "",
+        star_sj: "",
+        rnaseqc_metrics: "",
+        combined_counts_matrix: "",
+        sample_metadata: "",
+        deseq2_all_results: "",
+        deseq2_significant_results: "",
+        deseq2_normalized_counts: "",
+        deseq2_pca_plot: "",
+        deseq2_volcano_plot: "",
+        deseq2_heatmap: ""
+    }
+  }
+
+  parameter_meta {
+    samples: "list of samples to be analyzed by STAR and DESeq2"
+    reference_genome: "reference genome to use during STAR alignment"
+    reference_level: ""
+    contrast: ""
+  }
+
   input {
     Array[SampleInfo] samples
     RefGenome? reference_genome
@@ -85,6 +117,15 @@ workflow star_deseq2 {
 }
 
 task download_reference {
+  meta {
+    description: "Task for pulling down the GRCh38 reference fasta and gtf."
+    outputs: {
+        genome: "reference genome details to be used throughout the workflow"
+    }
+  }
+
+  parameter_meta {}
+
   input {}
 
   command <<<
@@ -104,13 +145,29 @@ task download_reference {
   }
 
   runtime {
-    docker: "getwilds/gtf-smash:latest"
+    docker: "getwilds/gtf-smash:v8"
     memory: "4 GB"
     cpu: 1
   }
 }
 
 task build_star_index {
+  meta {
+    description: "Task for building the STAR index files from fasta/gtf."
+    outputs: {
+        star_index_tar: ""
+    }
+  }
+
+  parameter_meta {
+    reference_fasta: ""
+    reference_gtf: ""
+    sjdb_overhang: ""
+    genome_sa_index_nbases: ""
+    memory_gb: ""
+    cpu_cores: ""
+  }
+
   input {
     File reference_fasta
     File reference_gtf
@@ -150,6 +207,17 @@ task build_star_index {
 }
 
 task collapse_gtf {
+  meta {
+    description: "Task for collapsing the provided gtf into one transcript per gene."
+    outputs: {
+        collapsed_gtf: ""
+    }
+  }
+
+  parameter_meta {
+    reference_gtf: ""
+  }
+
   input {
     File reference_gtf
   }
@@ -168,13 +236,38 @@ task collapse_gtf {
   }
 
   runtime {
-    docker: "getwilds/gtf-smash:latest"
+    docker: "getwilds/gtf-smash:v8"
     memory: "4 GB"
     cpu: 1
   }
 }
 
 task star_align_two_pass {
+  meta {
+    description: "Task for aligning RNA-seq reads using STAR's two-pass technique."
+    outputs: {
+        name: "",
+        condition: "",
+        bam: "",
+        bai: "",
+        gene_counts: "",
+        log_final: "",
+        log_progress: "",
+        log: "",
+        sj_out: ""
+    }
+  }
+
+  parameter_meta {
+    sample_data: ""
+    star_genome_tar: ""
+    ref_genome_name: ""
+    sjdb_overhang: ""
+    memory_gb: ""
+    cpu_cores: ""
+    star_threads: ""
+  }
+
   input {
     SampleInfo sample_data
     File star_genome_tar
@@ -237,6 +330,22 @@ task star_align_two_pass {
 }
 
 task rnaseqc_cov {
+  meta {
+    description: "Task for aligning RNA-seq reads using STAR's two-pass technique."
+    outputs: {
+        rnaseqc_metrics: ""
+    }
+  }
+
+  parameter_meta {
+    bam_file: ""
+    bam_index: ""
+    ref_gtf: ""
+    base_file_name: ""
+    memory_gb: ""
+    cpu_cores: ""
+  }
+
   input {
     File bam_file
     File bam_index
@@ -276,10 +385,10 @@ task combine_count_matrices {
     Int memory_gb = 4
     Int cpu_cores = 1
     Int count_column = 2
-    # Column to extract from ReadsPerGene.out.tab files:
-    # 2 = unstranded counts
-    # 3 = stranded counts, first read forward
-    # 4 = stranded counts, first read reverse
+        # Column to extract from ReadsPerGene.out.tab files:
+        # 2 = unstranded counts
+        # 3 = stranded counts, first read forward
+        # 4 = stranded counts, first read reverse
   }
 
   command <<<
@@ -299,13 +408,35 @@ task combine_count_matrices {
   }
 
   runtime {
-    docker: "getwilds/combine-counts:latest"
+    docker: "getwilds/combine-counts:0.1.0"
     memory: "~{memory_gb} GB"
     cpu: cpu_cores
   }
 }
 
 task run_deseq2 {
+  meta {
+    description: "Task for analyzing differential expression via DESeq2."
+    outputs: {
+        deseq2_results: "",
+        deseq2_significant: "",
+        deseq2_normalized_counts: "",
+        deseq2_pca_plot: "",
+        deseq2_volcano_plot: "",
+        deseq2_heatmap: ""
+    }
+  }
+
+  parameter_meta {
+    counts_matrix: ""
+    sample_metadata: ""
+    condition_column: ""
+    reference_level: ""
+    contrast: ""
+    memory_gb: ""
+    cpu_cores: ""
+  }
+
   input {
     File counts_matrix
     File sample_metadata
@@ -338,7 +469,7 @@ task run_deseq2 {
   }
 
   runtime {
-    docker: "getwilds/deseq2:latest"
+    docker: "getwilds/deseq2:1.40.2"
     memory: "~{memory_gb} GB"
     cpu: cpu_cores
   }
