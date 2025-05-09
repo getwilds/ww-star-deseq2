@@ -1,0 +1,73 @@
+name: Validation of WDL Script
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+jobs:
+  miniwdl_check:
+    runs-on: ubuntu-latest
+    steps:
+    - 
+      name: Checkout
+      uses: actions/checkout@v4
+    - 
+      name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.13
+    - 
+      name: Install miniwdl
+      run: |
+        python -m pip install --upgrade pip
+        pip3 install miniwdl
+    - 
+      name: Miniwdl Check
+      run: |
+        EXITCODE=0
+        echo "Checking WDL files using \`miniwdl check\`."
+        files=$(find . -name '*.wdl')
+        for file in $files; do
+          echo "  [***] $file [***]"
+          miniwdl check "$file"
+          EXITCODE=$(($? || EXITCODE))
+        done
+        exit $EXITCODE
+
+  womtoolval:
+    runs-on: ubuntu-latest
+    steps:
+    -
+      name: Checkout
+      uses: actions/checkout@v4
+    -
+      name: Set Up Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '21'
+    -
+      name: Pull WOMtool Jarfile
+      run: wget -q https://github.com/broadinstitute/cromwell/releases/download/86/womtool-86.jar
+    -
+      name: WOMtool Validation
+      run: java -jar womtool-86.jar validate *.wdl -i *-inputs.json
+
+  sprocket-lint:
+    runs-on: ubuntu-latest
+    steps:
+    - 
+      name: Checkout
+      uses: actions/checkout@v4
+    -
+      name: Check for ShellCheck
+      run: which shellcheck
+    - 
+      name: Sprocket Linting
+      uses: stjude-rust-labs/sprocket-action@main
+      with:
+        action: lint
+        deny-warnings: true
+        deny-notes: true
+        except: TodoComment ContainerUri TrailingComma ShellCheck
