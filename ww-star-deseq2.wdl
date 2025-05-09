@@ -130,10 +130,10 @@ task download_reference {
 
   command <<<
     set -eo pipefail
-    BASE_URL="https://ftp.ncbi.nlm.nih.gov/genomes/refseq/"
+    BASE_URL="https://ftp.ncbi.nlm.nih.gov/genomes/refseq"
     ORGANISM_DIR="vertebrate_mammalian/Homo_sapiens"
     ASSEMBLY_DIR="latest_assembly_versions/GCF_000001405.40_GRCh38.p14"
-    FULL_DIR = ${BASE_URL}/${ORGANISM_DIR}/${ASSEMBLY_DIR}
+    FULL_DIR="${BASE_URL}/${ORGANISM_DIR}/${ASSEMBLY_DIR}"
     wget ${FULL_DIR}/GCF_000001405.40_GRCh38.p14_genomic.fna.gz
     wget ${FULL_DIR}/GCF_000001405.40_GRCh38.p14_genomic.gtf.gz
     gunzip GCF_000001405.40_GRCh38.p14_genomic.fna.gz
@@ -263,8 +263,8 @@ task star_align_two_pass {
   }
 
   parameter_meta {
-    star_genome_tar: "Compressed tarball containing STAR genome index"
     sample_data: "Sample information including name, input fastq files, and experimental condition"
+    star_genome_tar: "Compressed tarball containing STAR genome index"
     ref_genome_name: "Reference genome name to include in output filenames"
     sjdb_overhang: "Length of the genomic sequence around the annotated junction"
     memory_gb: "Memory allocated for the task in GB"
@@ -304,8 +304,7 @@ task star_align_two_pass {
 
     rm -r star_index _STARtmp
 
-    mv Aligned.sortedByCoord.out.bam \
-      "~{sample_data.name}.~{ref_genome_name}.Aligned.sortedByCoord.out.bam"
+    mv Aligned.sortedByCoord.out.bam "~{sample_data.name}.~{ref_genome_name}.Aligned.sortedByCoord.out.bam"
     mv ReadsPerGene.out.tab "~{sample_data.name}.~{ref_genome_name}.ReadsPerGene.out.tab"
     mv Log.final.out "~{sample_data.name}.~{ref_genome_name}.Log.final.out"
     mv Log.progress.out "~{sample_data.name}.~{ref_genome_name}.Log.progress.out"
@@ -396,7 +395,7 @@ task combine_count_matrices {
     sample_names: "Array of sample names corresponding to the gene_count_files"
     sample_conditions: "Array of experimental conditions corresponding to each sample"
     memory_gb: "Memory allocated for the task in GB"
-    cpu_cores: "Number of CPU cores allocated for the task"
+    cpu_cores: "Number of CPU cores allocated for the task" 
     count_column: "Column number in STAR count files to extract (2=unstranded, 3=forward strand, 4=reverse strand)"
   }
 
