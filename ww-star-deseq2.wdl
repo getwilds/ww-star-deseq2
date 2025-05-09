@@ -2,8 +2,8 @@ version 1.0
 
 struct SampleInfo {
     String name
-    File R1
-    File R2
+    File r1
+    File r2
     String condition
 }
 
@@ -13,7 +13,7 @@ struct RefGenome {
     File gtf
 }
 
-workflow STAR2Pass {
+workflow star_deseq2 {
   input {
     Array[SampleInfo] samples
     RefGenome? reference_genome
@@ -62,7 +62,7 @@ workflow STAR2Pass {
       sample_conditions = STARalignTwoPass.condition
   }
 
-  call RunDESeq2 {
+  call run_deseq2 {
     input:
       counts_matrix = CombineCountMatrices.counts_matrix,
       sample_metadata = CombineCountMatrices.sample_metadata,
@@ -81,12 +81,12 @@ workflow STAR2Pass {
     Array[File] output_rnaseqc = RNASeQC.rnaseqc_metrics
     File combined_counts_matrix = CombineCountMatrices.counts_matrix
     File sample_metadata = CombineCountMatrices.sample_metadata
-    File deseq2_all_results = RunDESeq2.deseq2_results
-    File deseq2_significant_results = RunDESeq2.deseq2_significant
-    File deseq2_normalized_counts = RunDESeq2.deseq2_normalized_counts
-    File deseq2_pca_plot = RunDESeq2.deseq2_pca_plot
-    File deseq2_volcano_plot = RunDESeq2.deseq2_volcano_plot
-    File deseq2_heatmap = RunDESeq2.deseq2_heatmap
+    File deseq2_all_results = run_deseq2.deseq2_results
+    File deseq2_significant_results = run_deseq2.deseq2_significant
+    File deseq2_normalized_counts = run_deseq2.deseq2_normalized_counts
+    File deseq2_pca_plot = run_deseq2.deseq2_pca_plot
+    File deseq2_volcano_plot = run_deseq2.deseq2_volcano_plot
+    File deseq2_heatmap = run_deseq2.deseq2_heatmap
   }
 }
 
@@ -112,7 +112,7 @@ task DownloadReference {
   runtime {
     docker: "getwilds/gtf-smash:latest"
     memory: "4 GB"
-    cpu: "1"
+    cpu: 1
   }
 }
 
@@ -151,7 +151,7 @@ task BuildSTARIndex {
   runtime {
     docker: "getwilds/star:2.7.6a"
     memory: "~{memory_gb} GB"
-    cpu: "~{cpu_cores}"
+    cpu: cpu_cores
   }
 }
 
@@ -176,7 +176,7 @@ task CollapseGTF {
   runtime {
     docker: "getwilds/gtf-smash:latest"
     memory: "4 GB"
-    cpu: "1"
+    cpu: 1
   }
 }
 
@@ -199,7 +199,7 @@ task STARalignTwoPass {
     echo "Starting STAR alignment..."
     STAR \
       --genomeDir star_index \
-      --readFilesIn "~{sample_data.R1}" "~{sample_data.R2}" \
+      --readFilesIn "~{sample_data.r1}" "~{sample_data.r2}" \
       --runThreadN ~{star_threads} \
       --readFilesCommand zcat \
       --sjdbOverhang 100 \
@@ -237,7 +237,7 @@ task STARalignTwoPass {
   runtime {
     docker: "getwilds/star:2.7.6a"
     memory: "~{memory_gb} GB"
-    cpu: "~{cpu_cores}"
+    cpu: cpu_cores
   }
 }
 
@@ -269,7 +269,7 @@ task RNASeQC {
   runtime {
     docker: "getwilds/rnaseqc:2.4.2"
     memory: "~{memory_gb} GB"
-    cpu: "~{cpu_cores}"
+    cpu: cpu_cores
   }
 }
 
@@ -306,11 +306,11 @@ task CombineCountMatrices {
   runtime {
     docker: "getwilds/combine-counts:latest"
     memory: "~{memory_gb} GB"
-    cpu: "~{cpu_cores}"
+    cpu: cpu_cores
   }
 }
 
-task RunDESeq2 {
+task run_deseq2 {
   input {
     File counts_matrix
     File sample_metadata
@@ -345,6 +345,6 @@ task RunDESeq2 {
   runtime {
     docker: "getwilds/deseq2:latest"
     memory: "~{memory_gb} GB"
-    cpu: "~{cpu_cores}"
+    cpu: cpu_cores
   }
 }
