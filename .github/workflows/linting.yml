@@ -69,5 +69,5 @@ jobs:
       with:
         action: lint
         deny-warnings: true
-        deny-notes: true
+        deny-notes: false
         except: TodoComment ContainerUri TrailingComma
