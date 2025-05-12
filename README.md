@@ -8,12 +8,11 @@ This WILDS WDL workflow performs RNA-seq analysis using STAR's two-pass alignmen
 
 The workflow performs the following key steps:
 1. Optional automatic reference genome download (if not provided)
-2. GTF annotation collapsing for compatibility with RNA-SeQC
-3. STAR index building
-4. STAR two-pass alignment for each sample
-5. RNA-SeQC quality control analysis
-6. Combining gene count matrices
-7. DESeq2 differential expression analysis with visualization
+2. STAR index building
+3. STAR two-pass alignment for each sample
+4. RNA-SeQC quality control analysis
+5. Combining gene count matrices
+6. DESeq2 differential expression analysis with visualization
 
 ## Features
 
@@ -37,22 +36,22 @@ The workflow performs the following key steps:
 
 ```json
 {
-  "STAR2Pass.samples": [
+  "star_deseq2.samples": [
     {
       "name": "sample1",
-      "R1": "/path/to/sample1_1.fastq.gz",
-      "R2": "/path/to/sample1_2.fastq.gz",
+      "r1": "/path/to/sample1_1.fastq.gz",
+      "r2": "/path/to/sample1_2.fastq.gz",
       "condition": "treatment"
     },
     {
       "name": "sample2",
-      "R1": "/path/to/sample2_1.fastq.gz",
-      "R2": "/path/to/sample2_2.fastq.gz",
+      "r1": "/path/to/sample2_1.fastq.gz",
+      "r2": "/path/to/sample2_2.fastq.gz",
       "condition": "control"
     }
   ],
-  "STAR2Pass.reference_level": "control",
-  "STAR2Pass.contrast": "condition,treatment,control"
+  "star_deseq2.reference_level": "control",
+  "star_deseq2.contrast": "condition,treatment,control"
 }
 ```
 
@@ -85,8 +84,8 @@ The workflow accepts the following inputs:
 
 Each entry in the `samples` array should contain:
 - `name`: Sample identifier
-- `R1`: Path to R1 FASTQ file
-- `R2`: Path to R2 FASTQ file
+- `r1`: Path to R1 FASTQ file
+- `r2`: Path to R2 FASTQ file
 - `condition`: Group/condition for differential expression
 
 #### RefGenome Structure (optional)
@@ -102,14 +101,14 @@ The workflow produces the following outputs:
 
 | Output | Description |
 |--------|-------------|
-| `output_bam` | Aligned BAM files for each sample |
-| `output_bai` | BAM indexes for each sample |
-| `output_geneCounts` | Raw gene counts for each sample |
-| `output_log_final` | STAR final logs |
-| `output_log_progress` | STAR progress logs |
-| `output_log` | STAR main logs |
-| `output_SJ` | STAR splice junction files |
-| `output_rnaseqc` | RNA-SeQC quality metrics |
+| `star_bam` | Aligned BAM files for each sample |
+| `star_bai` | BAM indexes for each sample |
+| `star_gene_counts` | Raw gene counts for each sample |
+| `star_log_final` | STAR final logs |
+| `star_log_progress` | STAR progress logs |
+| `star_log` | STAR main logs |
+| `star_sj` | STAR splice junction files |
+| `rnaseqc_metrics` | RNA-SeQC quality metrics |
 | `combined_counts_matrix` | Combined gene counts matrix |
 | `sample_metadata` | Sample metadata table |
 | `deseq2_all_results` | Complete DESeq2 results |
@@ -141,9 +140,9 @@ This workflow uses the following Docker containers from the [WILDS Docker Librar
 
 - `getwilds/star:2.7.6a` - For STAR alignment
 - `getwilds/rnaseqc:2.4.2` - For RNA-SeQC quality control
-- `getwilds/gtf-smash:latest` - For GTF processing
-- `getwilds/combine-counts:latest` - For combining count matrices
-- `getwilds/deseq2:latest` - For differential expression analysis
+- `getwilds/gtf-smash:v8` - For reference genome download
+- `getwilds/combine-counts:0.1.0` - For combining count matrices
+- `getwilds/deseq2:1.40.2` - For differential expression analysis
 
 All containers are available on both DockerHub and GitHub Container Registry.
 

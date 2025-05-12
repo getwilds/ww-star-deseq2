@@ -1,23 +1,23 @@
 {
-  "STAR2Pass.samples": [
+  "star_deseq2.samples": [
     {
       "name": "SRR10724344",
-      "R1": "/path_to_first_input/SRR10724344_1.fastq.gz",
-      "R2": "/path_to_first_input/SRR10724344_2.fastq.gz",
+      "r1": "/path_to_first_input/SRR10724344_1.fastq.gz",
+      "r2": "/path_to_first_input/SRR10724344_2.fastq.gz",
       "condition": "treatment"
     },
     {
       "name": "SRR12345678",
-      "R1": "/path_to_second_input/SRR12345678_1.fastq.gz",
-      "R2": "/path_to_second_input/SRR12345678_2.fastq.gz",
+      "r1": "/path_to_second_input/SRR12345678_1.fastq.gz",
+      "r2": "/path_to_second_input/SRR12345678_2.fastq.gz",
       "condition": "control"
     }
   ],
-  "STAR2Pass.reference_genome": {
+  "star_deseq2.reference_genome": {
     "name": "SuperAwesomeGenome",
     "fasta": "/path_to_ref_data/awesome_genome.fna",
     "gtf": "/path_to_ref_data/awesome_transcripts.gtf"
   },
-  "STAR2Pass.reference_level": "control",
-  "STAR2Pass.contrast": "condition,treatment,control"
+  "star_deseq2.reference_level": "control",
+  "star_deseq2.contrast": "condition,treatment,control"
 }
