@@ -59,10 +59,6 @@ workflow star_deseq2 {
 
   RefGenome ref_genome_final = select_first([reference_genome, download_reference.genome])
 
-  call collapse_gtf { input:
-      reference_gtf = ref_genome_final.gtf
-  }
-
   call build_star_index { input:
       reference_fasta = ref_genome_final.fasta,
       reference_gtf = ref_genome_final.gtf
@@ -79,7 +75,7 @@ workflow star_deseq2 {
         base_file_name = sample.name,
         bam_file = star_align_two_pass.bam,
         bam_index = star_align_two_pass.bai,
-        ref_gtf = collapse_gtf.collapsed_gtf
+        ref_gtf = ref_genome_final.gtf
     }
   }
 
@@ -207,42 +203,6 @@ task build_star_index {
     docker: "getwilds/star:2.7.6a"
     memory: "~{memory_gb} GB"
     cpu: cpu_cores
-  }
-}
-
-task collapse_gtf {
-  meta {
-    description: "Task for collapsing the provided gtf into one transcript per gene."
-    outputs: {
-        collapsed_gtf: "Collapsed GTF file with simplified gene models (one transcript per gene)"
-    }
-  }
-
-  parameter_meta {
-    reference_gtf: "Reference genome GTF annotation file to be collapsed"
-  }
-
-  input {
-    File reference_gtf
-  }
-
-  command <<<
-    set -eo pipefail
-    
-    echo "Processing GTF file..."
-    collapse_annotation.py \
-      "~{reference_gtf}" \
-      collapsed.gtf
-  >>>
-
-  output {
-    File collapsed_gtf = "collapsed.gtf"
-  }
-
-  runtime {
-    docker: "getwilds/gtf-smash:v8"
-    memory: "4 GB"
-    cpu: 1
   }
 }
 
@@ -417,9 +377,9 @@ task combine_count_matrices {
     set -eo pipefail
 
     combine_star_counts.py \
-      --input "~{sep=" " gene_count_files}" \
-      --names "~{sep=" " sample_names}" \
-      --conditions "~{sep=" " sample_conditions}" \
+      --input ~{sep=" " gene_count_files} \
+      --names ~{sep=" " sample_names} \
+      --conditions ~{sep=" " sample_conditions} \
       --output combined_counts_matrix.txt \
       --count_column ~{count_column}
   >>>
