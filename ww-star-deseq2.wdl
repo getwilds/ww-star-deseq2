@@ -145,7 +145,7 @@ task download_reference {
   }
 
   runtime {
-    docker: "getwilds/star:2.7.6a"
+    docker: "getwilds/gtf-smash:v8"
     memory: "4 GB"
     cpu: 1
   }

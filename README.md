@@ -140,6 +140,7 @@ This workflow uses the following Docker containers from the [WILDS Docker Librar
 
 - `getwilds/star:2.7.6a` - For STAR alignment
 - `getwilds/rnaseqc:2.4.2` - For RNA-SeQC quality control
+- `getwilds/gtf-smash:v8` - For reference genome download
 - `getwilds/combine-counts:0.1.0` - For combining count matrices
 - `getwilds/deseq2:1.40.2` - For differential expression analysis
 
