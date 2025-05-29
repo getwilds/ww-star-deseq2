@@ -262,7 +262,7 @@ task star_align_two_pass {
       --quantMode GeneCounts \
       --quantTranscriptomeBAMcompression 5 
 
-    rm -r star_index _STARtmp
+    rm -r star_index
 
     mv Aligned.sortedByCoord.out.bam \
       "~{sample_data.name}.~{ref_genome_name}.Aligned.sortedByCoord.out.bam"
